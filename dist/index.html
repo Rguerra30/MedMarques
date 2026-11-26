@@ -34,6 +34,7 @@
 </section>
 <nav aria-label="Áreas da plataforma">
 <button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="roadmap" id="roadmapNav" aria-controls="roadmap" hidden>Cronograma Step 1</button><button class="pill" data-go="checkin" aria-controls="checkin">Check-in semanal</button><button class="pill" data-go="glossario" aria-controls="glossario">Glossário</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
+<button class="pill" data-go="financeiro" aria-controls="financeiro">Financeiro</button>
 </nav>
 <section id="painel" class="panel">
 <h2 tabindex="-1">Plano de estudos</h2>
@@ -136,6 +137,31 @@
 <section id="roteiro" class="panel" hidden>
 <h2 tabindex="-1">Roteiro ECFMG</h2><p class="muted">Consulte as regras do ciclo em que pretende se candidatar. A certificação é uma etapa do percurso para a residência. A licença médica segue as regras do estado.</p>
 <div id="stages" class="cards"></div>
+</section>
+<section id="financeiro" class="panel" hidden>
+<h2 tabindex="-1">Financeiro</h2>
+<p class="muted">Acompanhe o orçamento da validação do diploma, da preparação e da candidatura à residência.</p>
+<div class="card table-wrap">
+<table><caption>Totais por moeda</caption><thead><tr><th scope="col">Moeda</th><th scope="col">Previsto</th><th scope="col">Pago</th><th scope="col">Pago − previsto</th></tr></thead><tbody id="expenseTotals"></tbody></table>
+</div>
+<article class="card q" aria-labelledby="expenseTitle">
+<h3 id="expenseTitle">Nova despesa</h3>
+<form id="expenseForm" class="row">
+<label class="field">Descrição<input id="expenseName" list="expenseSuggestions" required maxlength="120"></label>
+<datalist id="expenseSuggestions"><option>USMLE Step 1</option><option>USMLE Step 2 CK</option><option>UWorld</option><option>First Aid</option><option>Boards &amp; Beyond</option><option>NBME</option><option>OET Medicine</option><option>Certificação ECFMG</option><option>Tradução de documentos</option><option>ERAS</option><option>NRMP Match</option><option>Passagens</option><option>Hospedagem</option><option>Equipamento de estudo</option></datalist>
+<label class="field">Categoria<select id="expenseCategory"><option>Provas e simulados</option><option>Materiais de estudo</option><option>Equipamentos e infraestrutura</option><option>Documentos e certificação</option><option>Candidatura à residência</option><option>Viagem e hospedagem</option><option>Outros</option></select></label>
+<label class="field">Moeda<select id="expenseCurrency"><option value="BRL">BRL · Real</option><option value="USD">USD · Dólar</option></select></label>
+<label class="field">Valor previsto<input id="expensePlanned" type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal"></label>
+<label class="field">Valor pago<input id="expensePaid" type="number" min="0" max="99999999.99" step="0.01" inputmode="decimal"></label>
+<label class="field">Data do pagamento<input id="expenseDate" type="date"></label>
+<button class="primary" id="expenseSubmit">Adicionar despesa</button>
+<button class="secondary" type="button" id="expenseCancel" hidden>Cancelar edição</button>
+</form>
+<p id="expenseStatus" role="status"></p>
+</article>
+<div class="card q table-wrap">
+<table><caption>Despesas registradas</caption><thead><tr><th scope="col">Despesa</th><th scope="col">Categoria</th><th scope="col">Previsto</th><th scope="col">Pago</th><th scope="col">Pagamento</th><th scope="col">Ações</th></tr></thead><tbody id="expenseRows"></tbody></table>
+</div>
 </section>
 <footer><p id="status" role="status"></p><p>O progresso é sincronizado com sua conta. Aguarde a confirmação de salvamento antes de trocar de dispositivo.</p></footer>
 </main>

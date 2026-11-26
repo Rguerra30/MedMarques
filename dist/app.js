@@ -42,7 +42,7 @@ const initialMilestones=[
  ['step2-prova','Realizar a prova do Step 2 CK'],
  ['ecfmg','Organizar os documentos e requisitos da ECFMG']
 ].map(([id,title])=>({id,title,date:'',done:false}));
-const empty={checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
+const empty={expenses:[],checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
 let state=structuredClone(empty);
 const by=id=>document.getElementById(id);
 let api,activeUser,revision,saving=false,saveConflict=false,pendingSave=null,bootVersion=0;
@@ -88,6 +88,7 @@ function show(id,move=true){
  document.querySelectorAll('.panel').forEach(el=>el.hidden=el.id!==id);
  document.querySelectorAll('nav button').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.go===id)));
  if(id==='painel') renderToday(Date.now());
+ if(id==='financeiro') renderExpenses();
  if(id==='revisao') renderErrors();
  if(id==='checkin') renderCheckin();
  if(id==='roadmap') renderRoadmap();
@@ -856,6 +857,8 @@ async function enter(session){
   activeUser=session.user;
   revision=progress.data?.revision??0;
   state={...structuredClone(empty),...progress.data?.state};
+  resetExpenseForm();
+  by('expenseStatus').textContent='';
   planOffset=0;
   by('todayTime').value='';
   refreshSessionDate();
@@ -947,5 +950,105 @@ by('logout').onclick=async()=>{
  const {error}=await api.auth.signOut({scope:'local'});
  if(error)by('status').textContent='Não foi possível sair. Tente novamente.';
 };
+let editingExpense=null;
+const expenseFields={
+ name:'expenseName',category:'expenseCategory',currency:'expenseCurrency',
+ planned:'expensePlanned',paid:'expensePaid',date:'expenseDate'
+};
+
+function expenseTotals(expenses,currency){
+ const matching=expenses.filter(item=>item.currency===currency);
+ return {
+  planned:matching.reduce((total,item)=>total+(item.planned??0),0),
+  paid:matching.reduce((total,item)=>total+(item.paid??0),0)
+ };
+}
+
+function expenseMoney(cents,currency){
+ return cents===null?'—':new Intl.NumberFormat('pt-BR',{style:'currency',currency}).format(cents/100);
+}
+
+function resetExpenseForm(){
+ editingExpense=null;
+ by('expenseForm').reset();
+ by('expenseTitle').textContent='Nova despesa';
+ by('expenseSubmit').textContent='Adicionar despesa';
+ by('expenseCancel').hidden=true;
+}
+
+function renderExpenses(){
+ by('expenseTotals').replaceChildren(...['BRL','USD'].map(currency=>{
+  const {planned,paid}=expenseTotals(state.expenses,currency);
+  const row=element('tr','');
+  const label=element('th',currency);
+  label.scope='row';
+  row.append(label,...[planned,paid,paid-planned].map(value=>element('td',expenseMoney(value,currency))));
+  return row;
+ }));
+ const rows=state.expenses.slice().reverse().map(item=>{
+  const row=element('tr','');
+  const label=element('th',item.name);
+  label.scope='row';
+  const actions=element('td','');
+  const buttons=element('div','','row');
+  buttons.append(action('Editar',()=>{
+   editingExpense=item.id;
+   for(const [key,id] of Object.entries(expenseFields)){
+    const value=item[key];
+    by(id).value=key==='planned'||key==='paid'?(value===null?'':(value/100).toFixed(2)):value;
+   }
+   by('expenseTitle').textContent='Editar despesa';
+   by('expenseSubmit').textContent='Salvar alterações';
+   by('expenseCancel').hidden=false;
+   by('expenseStatus').textContent='';
+   by('expenseName').focus();
+  },'secondary'),action('Excluir',()=>{
+   if(!window.confirm('Excluir a despesa “'+item.name+'”?'))return;
+   state.expenses=state.expenses.filter(entry=>entry.id!==item.id);
+   if(editingExpense===item.id)resetExpenseForm();
+   save('Despesa excluída.');
+   by('expenseStatus').textContent='Despesa removida do painel.';
+   renderExpenses();
+   by('expenseName').focus();
+  },'secondary'));
+  actions.append(buttons);
+  const date=item.date?weekFormat.format(dayTimestamp(item.date)):'—';
+  row.append(label,...[item.category,expenseMoney(item.planned,item.currency),expenseMoney(item.paid,item.currency),date].map(value=>element('td',value)),actions);
+  return row;
+ });
+ if(!rows.length){
+  const row=element('tr','');
+  const cell=element('td','Nenhuma despesa registrada.');
+  cell.colSpan=6;
+  row.append(cell);
+  rows.push(row);
+ }
+ by('expenseRows').replaceChildren(...rows);
+}
+
+by('expenseCancel').onclick=()=>{
+ resetExpenseForm();
+ by('expenseStatus').textContent='';
+ by('expenseName').focus();
+};
+
+by('expenseForm').onsubmit=event=>{
+ event.preventDefault();
+ const item=Object.fromEntries(Object.entries(expenseFields).map(([key,id])=>[key,by(id).value.trim()]));
+ for(const key of ['planned','paid'])item[key]=item[key]===''?null:Math.round(Number(item[key])*100);
+ if(!item.name||(item.planned===null&&item.paid===null)||(item.date&&!item.paid)){
+  by('expenseStatus').textContent='Informe a descrição e pelo menos um valor. Para informar a data do pagamento, preencha o valor pago.';
+  return;
+ }
+ item.id=editingExpense??crypto.randomUUID();
+ const existing=state.expenses.findIndex(entry=>entry.id===item.id);
+ if(existing<0)state.expenses.push(item);
+ else state.expenses[existing]=item;
+ save('Despesa atualizada.');
+ resetExpenseForm();
+ renderExpenses();
+ by('expenseStatus').textContent='Despesa atualizada no painel.';
+};
+
 void initializeAuth();
 
