@@ -37,6 +37,18 @@
 </nav>
 <section id="painel" class="panel">
 <h2 tabindex="-1">Plano de estudos</h2>
+<article class="card q" aria-labelledby="todayTitle">
+ <div class="row week-header">
+  <div><h3 id="todayTitle">Meu estudo de hoje</h3><p id="todayDate"></p></div>
+  <button class="primary" type="button" id="todayRegister">Registrar estudo de hoje</button>
+ </div>
+ <p class="flag" id="todayFocus"></p>
+ <label class="field">Quanto tempo você tem hoje?
+  <select id="todayTime"><option value="">Ver todas as tarefas</option><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="60">60 minutos ou mais</option></select>
+ </label>
+ <p id="todayAdvice" aria-live="polite"></p>
+ <details id="todayDetails" hidden><summary>Tarefas do cronograma</summary><ol id="todayTasks" class="list"></ol><p id="todayAnki"></p></details>
+</article>
 <article class="card q" aria-labelledby="agendaTitle">
 <div class="row week-header"><h3 id="agendaTitle">Agenda de exercícios</h3><div class="row"><button type="button" class="secondary" id="prevPlanWeek">← Anterior</button><button type="button" class="secondary" id="currentPlanWeek">Esta semana</button><button type="button" class="secondary" id="nextPlanWeek">Próxima →</button></div></div>
 <p id="planSummary" aria-live="polite"></p>

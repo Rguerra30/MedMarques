@@ -87,6 +87,7 @@ async function flushProgress(){
 function show(id,move=true){
  document.querySelectorAll('.panel').forEach(el=>el.hidden=el.id!==id);
  document.querySelectorAll('nav button').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.go===id)));
+ if(id==='painel') renderToday(Date.now());
  if(id==='revisao') renderErrors();
  if(id==='checkin') renderCheckin();
  if(id==='roadmap') renderRoadmap();
@@ -143,7 +144,9 @@ function agendaFor(now,offset){
  return {days,done,remaining,available:eligible.length,monday,today};
 }
 function renderAgenda(){
- const {days,done,remaining,available,monday,today}=agendaFor(Date.now(),planOffset);
+ const now=Date.now();
+ renderToday(now);
+ const {days,done,remaining,available,monday,today}=agendaFor(now,planOffset);
  const summary='Semana de '+weekFormat.format(monday)+' · '+state.focus+' · '+done+' de '+state.questionTarget+' questões realizadas.';
  const detail=planOffset<0?' Semana encerrada.':!state.questionTarget?' Defina a meta de questões abaixo.':
   remaining&&!available?' Sem dias livres restantes para distribuir as '+remaining+' questões.':' '+available+' dia(s) livre(s) para distribuir as '+remaining+' restantes.';
@@ -329,6 +332,47 @@ function renderPace(monday,today){
 by('paceRegister').onclick=()=>{
  by('sessionTrack').value='Step 1';
  by('sessionDate').focus();
+};
+
+function todayAdvice(status, minutes, remaining, hasPlan){
+ if(status==='plantao'||status==='pos')return 'Priorize o descanso. Se estiver disposta e tiver uma pausa, faça uma revisão leve no Anki. Dia sem meta de questões.';
+ if(status==='outro')return 'Dia indisponível na agenda. Retome o estudo no próximo dia livre.';
+ if(status==='confirmar')return 'Confirme a escala de hoje na agenda para definir a carga.';
+ if(minutes&&minutes<=15)return 'Use o tempo para revisar alguns cartões no Anki ou retomar um erro recente.';
+ if(minutes&&minutes<=30)return 'Escolha uma tarefa curta do tema do dia. Reserve os minutos finais para revisar o que aprendeu.';
+ if(remaining>0)return remaining+' questões restantes na meta de hoje. Faça um bloco e reserve tempo para revisar as alternativas.';
+ if(hasPlan)return 'Use as tarefas abaixo para orientar a sessão e revise os pontos que ainda geram dúvidas.';
+ return 'Consulte sua agenda ou registre o estudo que já fez hoje.';
+}
+
+function renderToday(now){
+ const agenda=agendaFor(now,0);
+ const day=agenda.days.find(item=>item.key===agenda.today);
+ const week=state.focus==='Step 1'?roadmapForDay(day.key):null;
+ const plannedDay=week?.days.find(item=>item.date===day.key);
+ const canStudy=day.status==='livre';
+ const remaining=plannedDay
+  ? Math.max(0, (plannedDay.assessment?0:plannedDay.questions)-paceForWeek(week,day.key,state.availability,state.sessions).days.find(item=>item.date===day.key).done)
+  : day.target;
+ by('todayDate').textContent=weekdayFormat.format(day.timestamp);
+ const earlyShift=canStudy&&plannedDay?.workload==='Antes do plantão noturno';
+ by('todayFocus').textContent=[state.focus,week?.focus,earlyShift?plannedDay.workload:availability[day.status]??'Confirmar escala'].filter(Boolean).join(' · ');
+ by('todayAdvice').textContent=todayAdvice(day.status,Number(by('todayTime').value),remaining,!!plannedDay)
+  +(canStudy&&plannedDay?.assessment?' Se houver tempo para a autoavaliação NBME, consulte a tarefa do dia.':'')
+  +(earlyShift?' Encerre antes do plantão.':'');
+ const details=by('todayDetails');
+ details.hidden=!plannedDay||!canStudy;
+ details.open=canStudy&&by('todayTime').value==='';
+ const tasks=plannedDay?.task.replace(/^\d+\)\s*/,'').split(/\s+\d+\)\s+/)??[];
+ by('todayTasks').replaceChildren(...tasks.map(task=>element('li',task)));
+ by('todayAnki').textContent=plannedDay?'Anki previsto · '+plannedDay.anki:'';
+}
+
+by('todayTime').onchange=()=>renderToday(Date.now());
+by('todayRegister').onclick=()=>{
+ refreshSessionDate();
+ by('sessionTrack').value=state.focus;
+ by('duration').focus();
 };
 
 function renderCheckin(){
@@ -813,6 +857,7 @@ async function enter(session){
   revision=progress.data?.revision??0;
   state={...structuredClone(empty),...progress.data?.state};
   planOffset=0;
+  by('todayTime').value='';
   refreshSessionDate();
   by('sessionStatus').textContent='';
   by('questionTarget').value=state.questionTarget;
