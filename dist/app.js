@@ -185,6 +185,7 @@ function renderAgenda(){
   }
   return card;
  }));
+ renderPace(monday,today);
 }
 by('prevPlanWeek').onclick=()=>{planOffset--;renderAgenda();};
 by('currentPlanWeek').onclick=()=>{planOffset=0;renderAgenda();};
@@ -262,6 +263,73 @@ async function loadRoadmap(version,userId){
   // A failed optional planning request does not block study or saved progress.
  }
 }
+
+function paceForWeek(week,today,availabilityByDay,sessions){
+ const counts=new Map();
+ for(const session of sessions){
+  if(session.track!=='Step 1')continue;
+  const key=dayKey(session.date);
+  counts.set(key,(counts.get(key)??0)+questionCount(session));
+ }
+ const days=week.days.map(day=>{
+  const status=availabilityByDay[day.date];
+  const sunday=day.workload==='Alternância quinzenal';
+  const pending=sunday&&!status;
+  const blocked=status?status!=='livre':day.workload==='Pós-plantão: recuperação'||day.workload==='Plantão diurno após noite';
+  const planned=blocked||pending||day.assessment?0:day.questions;
+  return {...day,planned,done:counts.get(day.date)??0,pending};
+ });
+ const throughToday=days.filter(day=>day.date<=today);
+ return {days,
+  total:days.reduce((sum,day)=>sum+day.planned,0),
+  expected:throughToday.reduce((sum,day)=>sum+day.planned,0),
+  done:throughToday.reduce((sum,day)=>sum+day.done,0)
+ };
+}
+
+function renderPace(monday,today){
+ const selectedWeek=roadmapForDay(dayKey(monday));
+ const upcoming=planOffset===0?roadmap.find(week=>week.days[0].date>today):null;
+ const week=state.focus==='Step 1'?(selectedWeek??upcoming):null;
+ by('paceCard').hidden=!week;
+ if(!week)return;
+ const {days,total,expected,done}=paceForWeek(week,today,state.availability,state.sessions);
+ const delta=done-expected;
+ const beforeStart=today<days[0].date;
+ const complete=today>days.at(-1).date;
+ by('paceWeek').textContent='Semana '+week.week+' · '+week.focus;
+ by('paceTotal').textContent=total;
+ by('paceExpected').textContent=expected;
+ by('paceDone').textContent=done;
+ by('paceDifference').textContent=beforeStart?'Semana ainda não iniciada.':
+  (complete?'Resultado da semana: ':'Ritmo até hoje: ')+(delta>0?delta+' questões acima do previsto.':
+   delta<0?Math.abs(delta)+' questões abaixo do previsto.':'em linha com o previsto.');
+ const max=Math.max(1,...days.flatMap(day=>[day.planned,day.done]));
+ by('paceChart').replaceChildren(...days.map(day=>{
+  const row=element('li','','pace-row');
+  const date=weekFormat.format(dayTimestamp(day.date)).slice(0,5);
+  const pending=day.pending?' · confirmar escala':'';
+  const detail=day.assessment?' · NBME fora da meta de questões':'';
+  row.append(element('span',day.label+' '+date+pending+detail,'pace-day'));
+  for(const [name,value,modifier] of [['Planejado',day.planned,'planned'],['Realizado',day.done,'done']]){
+   const line=element('div','','pace-line');
+   line.append(element('span',name,'sr-only'));
+   const track=element('div','','pace-track');
+   const bar=element('div','','pace-fill '+modifier);
+   bar.style.width=(100*value/max)+'%';
+   track.setAttribute('aria-hidden','true');
+   track.append(bar);
+   line.append(track,element('span',String(value),'pace-value'));
+   row.append(line);
+  }
+  return row;
+ }));
+}
+
+by('paceRegister').onclick=()=>{
+ by('sessionTrack').value='Step 1';
+ by('sessionDate').focus();
+};
 
 function renderCheckin(){
  const now=Date.now();
