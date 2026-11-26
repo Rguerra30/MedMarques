@@ -32,7 +32,7 @@
   <div class="hero-meter"><span>Meta desta semana</span><strong id="heroCount"></strong><progress id="meter" value="0" max="1" aria-label="Progresso semanal"></progress></div>
 </section>
 <nav aria-label="Áreas da plataforma">
-<button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
+<button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="checkin" aria-controls="checkin">Check-in semanal</button><button class="pill" data-go="glossario" aria-controls="glossario">Glossário</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
 </nav>
 <section id="painel" class="panel">
 <h2 tabindex="-1">Plano de estudos</h2>
@@ -58,6 +58,27 @@
 <p class="muted">Pratique com correção imediata. Feche cada etapa com questões diferentes, tempo contado e correção ao final.</p>
 <div id="trackSwitch" class="row" aria-label="Exame"></div><div id="modules" class="cards q"></div>
 <div class="card q" id="question" hidden></div>
+</section>
+<section id="checkin" class="panel" hidden>
+<h2 tabindex="-1">Check-in semanal</h2>
+<div class="card"><p id="checkinSummary"></p><p id="checkinAdvice"></p>
+<form id="checkinForm">
+<label class="field">O que funcionou nesta semana?<input id="checkinWins" maxlength="300"></label>
+<label class="field">O que dificultou o estudo?<input id="checkinBarrier" maxlength="300"></label>
+<label class="field">Qual é sua prioridade para a próxima semana?<input id="checkinPriority" maxlength="300" required></label>
+<div class="row q"><button class="primary">Salvar check-in</button><button type="button" class="secondary" id="checkinPlan">Planejar próximos plantões</button></div>
+</form><p id="checkinStatus" role="status"></p></div>
+<div class="card q"><h3>Check-ins anteriores</h3><ul id="checkinHistory" class="list"></ul></div>
+</section>
+<section id="glossario" class="panel" hidden>
+<h2 tabindex="-1">Glossário médico</h2>
+<div class="row">
+<label class="field">Buscar sigla ou termo<input type="search" id="glossarySearch" placeholder="Ex.: HPI, hemograma, dor"></label>
+<label class="field">Categoria<select id="glossaryCategory"><option value="">Todas</option></select></label>
+</div>
+<p id="glossaryCount" role="status"></p>
+<div class="card table-wrap"><table><thead><tr><th scope="col">Sigla ou termo</th><th scope="col">Em inglês</th><th scope="col">Em português</th><th scope="col">Categoria</th><th scope="col">Contexto</th></tr></thead><tbody id="glossaryRows"></tbody></table></div>
+<p class="sources"><a href="https://medlineplus.gov/appendixb.html" target="_blank" rel="noopener noreferrer">Siglas no MedlinePlus</a> · <a href="https://www.nbme.org/examinees/self-assessments/" target="_blank" rel="noopener noreferrer">Autoavaliações NBME</a></p>
 </section>
 <section id="semanas" class="panel" hidden>
 <h2 tabindex="-1">Evolução semanal</h2>
@@ -85,5 +106,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.89.0/dist/umd/supabase.js" defer></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
+<script src="glossary.js" defer></script>
 </body>
 </html>

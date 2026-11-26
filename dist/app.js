@@ -42,7 +42,7 @@ const initialMilestones=[
  ['step2-prova','Realizar a prova do Step 2 CK'],
  ['ecfmg','Organizar os documentos e requisitos da ECFMG']
 ].map(([id,title])=>({id,title,date:'',done:false}));
-const empty={availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
+const empty={checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
 let state=structuredClone(empty);
 const by=id=>document.getElementById(id);
 let api,activeUser,revision,saving=false,saveConflict=false,pendingSave=null,bootVersion=0;
@@ -88,6 +88,7 @@ function show(id,move=true){
  document.querySelectorAll('.panel').forEach(el=>el.hidden=el.id!==id);
  document.querySelectorAll('nav button').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.go===id)));
  if(id==='revisao') renderErrors();
+ if(id==='checkin') renderCheckin();
  if(id==='semanas') renderWeeks();
  if(move){const heading=by(id).querySelector('h2');heading.focus();}
 }
@@ -169,6 +170,41 @@ function renderAgenda(){
 by('prevPlanWeek').onclick=()=>{planOffset--;renderAgenda();};
 by('currentPlanWeek').onclick=()=>{planOffset=0;renderAgenda();};
 by('nextPlanWeek').onclick=()=>{planOffset++;renderAgenda();};
+
+function renderCheckin(){
+ const now=Date.now();
+ const week=agendaFor(now,0);
+ const next=agendaFor(now,1);
+ const key=dayKey(week.monday);
+ const current=state.checkins[key];
+ by('checkinSummary').textContent='Semana de '+weekFormat.format(week.monday)+' · '+state.focus+' · '+week.done+' de '+state.questionTarget+' questões. Próxima semana: '+next.available+' de 7 dias disponíveis.';
+ const nextMilestone=state.milestones.filter(item=>!item.done&&item.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
+ const suggestion=!next.available?'Confira os plantões e escolha uma prioridade compatível com a próxima semana.':
+   !state.questionTarget?'Defina uma meta de questões que caiba nos dias disponíveis.':
+   week.remaining?'Revise o que dificultou a meta antes de definir a carga da próxima semana.':
+   'Use o resultado da semana para decidir qual assunto merece mais revisão.';
+ by('checkinAdvice').textContent=suggestion+(nextMilestone?' Marco mais próximo: '+nextMilestone.title+' em '+weekFormat.format(dayTimestamp(nextMilestone.date))+'.':'');
+ by('checkinWins').value=current?.wins??'';
+ by('checkinBarrier').value=current?.barrier??'';
+ by('checkinPriority').value=current?.priority??'';
+ by('checkinStatus').textContent=current?'Check-in desta semana registrado.':'Check-in desta semana pendente.';
+ const history=Object.entries(state.checkins).filter(([date])=>date!==key).sort(([a],[b])=>b.localeCompare(a));
+ by('checkinHistory').replaceChildren(...(history.length?history.map(([date,item])=>element('li',
+   weekFormat.format(dayTimestamp(date))+' · '+item.track+' · Prioridade: '+item.priority
+   +(item.wins?' · Avanço: '+item.wins:'')+(item.barrier?' · Obstáculo: '+item.barrier:''))):[element('li','Nenhum check-in anterior.')]));
+}
+
+by('checkinForm').onsubmit=event=>{
+ event.preventDefault();
+ const priority=by('checkinPriority').value.trim();
+ if(!priority){by('checkinPriority').focus();return;}
+ state.checkins[dayKey(weekStart(Date.now()))]={
+  track:state.focus,wins:by('checkinWins').value.trim(),barrier:by('checkinBarrier').value.trim(),priority
+ };
+ save('Check-in registrado.');
+ renderCheckin();
+};
+by('checkinPlan').onclick=()=>{planOffset=1;renderAgenda();show('painel');};
 
 function renderMilestones(){
  const today=dayKey(Date.now());
