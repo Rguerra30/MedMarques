@@ -89,6 +89,7 @@ function show(id,move=true){
  document.querySelectorAll('nav button').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.go===id)));
  if(id==='revisao') renderErrors();
  if(id==='checkin') renderCheckin();
+ if(id==='roadmap') renderRoadmap();
  if(id==='semanas') renderWeeks();
  if(move){const heading=by(id).querySelector('h2');heading.focus();}
 }
@@ -122,13 +123,18 @@ function agendaFor(now,offset){
  const monday=moveDay(weekStart(now),offset*7);
  const weekEnd=moveDay(monday,7);
  const today=dayKey(now);
+ const roadmapWeek=state.focus==='Step 1'?roadmapForDay(dayKey(monday)):null;
  const external=state.sessions.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
  const internal=state.practiceLog.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
  const days=Array.from({length:7},(_,index)=>{
   const timestamp=moveDay(monday,index),key=dayKey(timestamp);
   const done=external.filter(item=>dayKey(item.date)===key).reduce((total,item)=>total+questionCount(item),0)
    +internal.filter(item=>dayKey(item.date)===key).length;
-  return {timestamp,key,status:state.availability[key]??'livre',done,target:0};
+  const workload=roadmapWeek?.days[index]?.workload;
+  const suggested=workload==='Pós-plantão: recuperação'?'pos':
+   workload==='Plantão diurno após noite'?'plantao':
+   workload==='Alternância quinzenal'?'confirmar':'livre';
+  return {timestamp,key,status:state.availability[key]??suggested,suggested,done,target:0};
  });
  const done=days.reduce((total,day)=>total+day.done,0);
  const remaining=Math.max(0,state.questionTarget-done);
@@ -142,12 +148,21 @@ function renderAgenda(){
  const detail=planOffset<0?' Semana encerrada.':!state.questionTarget?' Defina a meta de questões abaixo.':
   remaining&&!available?' Sem dias livres restantes para distribuir as '+remaining+' questões.':' '+available+' dia(s) livre(s) para distribuir as '+remaining+' restantes.';
  by('planSummary').textContent=summary+detail;
+ const roadmapWeek=state.focus==='Step 1'?roadmapForDay(dayKey(monday)):null;
+ const roadmapButton=by('agendaRoadmap');
+ roadmapButton.hidden=!roadmapWeek;
+ roadmapButton.onclick=()=>openRoadmap(dayKey(monday));
  by('planDays').replaceChildren(...days.map(day=>{
   const card=element('div','','plan-day'+(day.status!=='livre'?' blocked':'')+(day.key===today?' today':''));
   const label=element('label','');
   label.append(element('h4',weekdayFormat.format(day.timestamp)));
   const select=element('select','');
   select.setAttribute('aria-label','Disponibilidade de '+weekFormat.format(day.timestamp));
+  if(day.suggested==='confirmar'){
+   const option=element('option','Confirmar escala');
+   option.value='confirmar';
+   select.append(option);
+  }
   for(const [value,title] of Object.entries(availability)){
    const option=element('option',title);
    option.value=value;
@@ -155,15 +170,19 @@ function renderAgenda(){
   }
   select.value=day.status;
   select.onchange=()=>{
-   if(select.value==='livre')delete state.availability[day.key];
+   if(select.value===day.suggested)delete state.availability[day.key];
    else state.availability[day.key]=select.value;
    save('Disponibilidade salva.');
    renderAgenda();
    by('planDays').querySelectorAll('select')[days.indexOf(day)]?.focus();
   };
   label.append(select);
-  const plan=day.status!=='livre'?'Sem exercícios previstos':day.key<today?'Dia encerrado':day.target+' questões previstas';
+  const plan=day.status==='confirmar'?'Aguardando escala':day.status!=='livre'?'Sem exercícios previstos':day.key<today?'Dia encerrado':day.target+' questões previstas';
   card.append(label,element('p',plan),element('p',day.done+' realizadas'));
+  if(roadmapWeek){
+   const plannedDay=roadmapWeek.days.find(item=>item.date===day.key);
+   if(plannedDay)card.append(element('p',plannedDay.workload));
+  }
   return card;
  }));
 }
@@ -171,13 +190,87 @@ by('prevPlanWeek').onclick=()=>{planOffset--;renderAgenda();};
 by('currentPlanWeek').onclick=()=>{planOffset=0;renderAgenda();};
 by('nextPlanWeek').onclick=()=>{planOffset++;renderAgenda();};
 
+let roadmap=[];
+let roadmapIndex=0;
+
+function roadmapForDay(key){
+ return roadmap.find(week=>key>=week.days[0].date&&key<=week.days.at(-1).date);
+}
+function openRoadmap(key){
+ const index=roadmap.findIndex(week=>week.days.some(day=>day.date===key));
+ if(index!==-1)roadmapIndex=index;
+ show('roadmap');
+}
+function renderRoadmap(){
+ const week=roadmap[roadmapIndex];
+ const selection=by('roadmapWeek');
+ selection.replaceChildren(...roadmap.map((entry,index)=>{
+  const option=element('option','Semana '+entry.week+' · '+entry.focus);
+  option.value=index;
+  return option;
+ }));
+ selection.value=roadmapIndex;
+ by('roadmapPrev').disabled=roadmapIndex===0;
+ by('roadmapNext').disabled=roadmapIndex===roadmap.length-1;
+ if(!week)return;
+ by('roadmapTitle').textContent=week.focus;
+ by('roadmapTopics').textContent=week.topics;
+ by('roadmapAreas').textContent=week.areas;
+ const weekStartDate=weekFormat.format(dayTimestamp(week.days[0].date));
+ const weekEndDate=weekFormat.format(dayTimestamp(week.days.at(-1).date));
+ by('roadmapDates').textContent=weekStartDate+' a '+weekEndDate;
+ const questionsByDay=new Map();
+ for(const session of state.sessions){
+  if(session.track!=='Step 1')continue;
+  const key=dayKey(session.date);
+  questionsByDay.set(key,(questionsByDay.get(key)??0)+questionCount(session));
+ }
+ by('roadmapCards').replaceChildren(...week.days.map(day=>{
+  const card=element('article','','card');
+  const actualStatus=state.availability[day.date];
+  const conditional=day.workload==='Alternância quinzenal';
+  const blocked=actualStatus&&actualStatus!=='livre';
+  const reference=conditional
+   ?(day.questions>0?day.questions+' questões na planilha, se domingo livre':'Atividade conforme o domingo e a escala')
+   :day.questions+' questões UWorld de referência';
+  const text=blocked?'Sem meta obrigatória · '+availability[actualStatus]:reference;
+  const assessment=day.assessment?' · NBME/CBSSA previsto se houver disponibilidade':'';
+  card.append(element('h3',day.label+' · '+weekFormat.format(dayTimestamp(day.date))),
+   element('p',day.workload+assessment),element('p',text+' · '+(questionsByDay.get(day.date)??0)+' questões externas registradas'));
+  if(!blocked)card.append(element('p',day.task));
+  const details=element('details','');
+  details.append(element('summary',blocked?'Ver tarefa de referência e orientação':'Carga e orientação de progressão'));
+  if(blocked)details.append(element('p',day.task));
+  details.append(element('p','Anki: '+day.anki),element('p',day.guidance));
+  card.append(details);
+  return card;
+ }));
+}
+by('roadmapWeek').onchange=event=>{roadmapIndex=Number(event.target.value);renderRoadmap();};
+by('roadmapPrev').onclick=()=>{if(roadmapIndex>0){roadmapIndex--;renderRoadmap();}};
+by('roadmapNext').onclick=()=>{if(roadmapIndex<roadmap.length-1){roadmapIndex++;renderRoadmap();}};
+async function loadRoadmap(version,userId){
+ try{
+  const {data,error}=await api.from('study_roadmaps').select('weeks').eq('user_id',userId).maybeSingle();
+  if(version!==bootVersion||error||!Array.isArray(data?.weeks)||!data.weeks.length)return;
+  roadmap=data.weeks;
+  const activeWeek=roadmapForDay(dayKey(Date.now()));
+  roadmapIndex=activeWeek?roadmap.indexOf(activeWeek):0;
+  by('roadmapNav').hidden=false;
+  renderAgenda();
+ }catch{
+  // A failed optional planning request does not block study or saved progress.
+ }
+}
+
 function renderCheckin(){
  const now=Date.now();
  const week=agendaFor(now,0);
  const next=agendaFor(now,1);
  const key=dayKey(week.monday);
  const current=state.checkins[key];
- by('checkinSummary').textContent='Semana de '+weekFormat.format(week.monday)+' · '+state.focus+' · '+week.done+' de '+state.questionTarget+' questões. Próxima semana: '+next.available+' de 7 dias disponíveis.';
+ const roadmapWeek=state.focus==='Step 1'?roadmapForDay(key):null;
+ by('checkinSummary').textContent='Semana de '+weekFormat.format(week.monday)+' · '+state.focus+' · '+week.done+' de '+state.questionTarget+' questões. Próxima semana: '+next.available+' de 7 dias disponíveis.'+(roadmapWeek?' Tema previsto: '+roadmapWeek.focus+'.':'');
  const nextMilestone=state.milestones.filter(item=>!item.done&&item.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
  const suggestion=!next.available?'Confira os plantões e escolha uma prioridade compatível com a próxima semana.':
    !state.questionTarget?'Defina uma meta de questões que caiba nos dias disponíveis.':
@@ -628,6 +721,8 @@ function authControls(disabled){
 }
 async function enter(session){
  const version=++bootVersion;
+ roadmap=[];
+ by('roadmapNav').hidden=true;
  clearInterval(timer);
  by('study').hidden=true;
  by('loginPage').hidden=false;
@@ -675,6 +770,7 @@ async function enter(session){
   authMessage('');
   show('painel',false);
   void loadOptionalBank(version);
+  void loadRoadmap(version,session.user.id);
  }catch{
   if(version!==bootVersion)return;
   authMessage('Não foi possível carregar seu progresso. Tente novamente.');

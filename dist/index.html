@@ -32,14 +32,14 @@
   <div class="hero-meter"><span>Meta desta semana</span><strong id="heroCount"></strong><progress id="meter" value="0" max="1" aria-label="Progresso semanal"></progress></div>
 </section>
 <nav aria-label="Áreas da plataforma">
-<button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="checkin" aria-controls="checkin">Check-in semanal</button><button class="pill" data-go="glossario" aria-controls="glossario">Glossário</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
+<button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="roadmap" id="roadmapNav" aria-controls="roadmap" hidden>Cronograma Step 1</button><button class="pill" data-go="checkin" aria-controls="checkin">Check-in semanal</button><button class="pill" data-go="glossario" aria-controls="glossario">Glossário</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
 </nav>
 <section id="painel" class="panel">
 <h2 tabindex="-1">Plano de estudos</h2>
 <article class="card q" aria-labelledby="agendaTitle">
 <div class="row week-header"><h3 id="agendaTitle">Agenda de exercícios</h3><div class="row"><button type="button" class="secondary" id="prevPlanWeek">← Anterior</button><button type="button" class="secondary" id="currentPlanWeek">Esta semana</button><button type="button" class="secondary" id="nextPlanWeek">Próxima →</button></div></div>
 <p id="planSummary" aria-live="polite"></p>
-<div id="planDays" class="plan-days"></div>
+<button class="secondary" type="button" id="agendaRoadmap" hidden>Ver tarefas do cronograma</button><div id="planDays" class="plan-days"></div>
 </article>
 <div class="stats"><div class="stat"><strong id="minutes"></strong>Minutos na semana</div><div class="stat"><strong id="accuracy"></strong>Acertos na primeira tentativa</div><div class="stat"><strong id="pending"></strong>Questões para revisar</div></div>
 <div class="cards">
@@ -58,6 +58,16 @@
 <p class="muted">Pratique com correção imediata. Feche cada etapa com questões diferentes, tempo contado e correção ao final.</p>
 <div id="trackSwitch" class="row" aria-label="Exame"></div><div id="modules" class="cards q"></div>
 <div class="card q" id="question" hidden></div>
+</section>
+<section id="roadmap" class="panel" hidden>
+<h2 tabindex="-1">Cronograma Step 1</h2>
+<p class="muted">As metas diárias abaixo são as referências do cronograma. Confirme os domingos alternados na sua agenda.</p>
+<div class="card">
+<div class="row"><label class="field">Semana<select id="roadmapWeek"></select></label>
+<button class="secondary" type="button" id="roadmapPrev">← Anterior</button><button class="secondary" type="button" id="roadmapNext">Próxima →</button></div>
+<p id="roadmapDates"></p><h3 id="roadmapTitle"></h3><p id="roadmapTopics"></p><p id="roadmapAreas"></p>
+</div>
+<div class="cards q" id="roadmapCards"></div>
 </section>
 <section id="checkin" class="panel" hidden>
 <h2 tabindex="-1">Check-in semanal</h2>
