@@ -34,7 +34,15 @@ const clinicalSources=[
  ['Conteúdo oficial do Step 1','https://www.usmle.org/step-exams/step-1/step-1-exam-content'],
  ['Conteúdo oficial do Step 2 CK','https://www.usmle.org/step-exams/step-2-ck/step-2-ck-exam-content']
 ];
-const empty={hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
+const initialMilestones=[
+ ['diagnostico','Registrar a primeira autoavaliação'],
+ ['step1-revisao','Concluir a revisão do Step 1'],
+ ['step1-prova','Realizar a prova do Step 1'],
+ ['step2-revisao','Concluir a revisão do Step 2 CK'],
+ ['step2-prova','Realizar a prova do Step 2 CK'],
+ ['ecfmg','Organizar os documentos e requisitos da ECFMG']
+].map(([id,title])=>({id,title,date:'',done:false}));
+const empty={availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
 let state=structuredClone(empty);
 const by=id=>document.getElementById(id);
 let api,activeUser,revision,saving=false,saveConflict=false,pendingSave=null,bootVersion=0;
@@ -84,6 +92,132 @@ function show(id,move=true){
  if(move){const heading=by(id).querySelector('h2');heading.focus();}
 }
 document.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>show(el.dataset.go));
+const availability={
+ livre:'Disponível',
+ plantao:'Plantão',
+ pos:'Pós-plantão',
+ outro:'Indisponível'
+};
+const weekdayFormat=new Intl.DateTimeFormat('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+let planOffset=0;
+
+function moveDay(timestamp,days){
+ const date=new Date(timestamp);
+ date.setDate(date.getDate()+days);
+ return date.getTime();
+}
+function dayKey(timestamp){
+ const date=new Date(timestamp);
+ return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+}
+function dayTimestamp(key){
+ const [year,month,day]=key.split('-').map(Number);
+ return new Date(year,month-1,day,12).getTime();
+}
+function questionCount(session){
+ return session.questions??0;
+}
+function agendaFor(now,offset){
+ const monday=moveDay(weekStart(now),offset*7);
+ const weekEnd=moveDay(monday,7);
+ const today=dayKey(now);
+ const external=state.sessions.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
+ const internal=state.practiceLog.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
+ const days=Array.from({length:7},(_,index)=>{
+  const timestamp=moveDay(monday,index),key=dayKey(timestamp);
+  const done=external.filter(item=>dayKey(item.date)===key).reduce((total,item)=>total+questionCount(item),0)
+   +internal.filter(item=>dayKey(item.date)===key).length;
+  return {timestamp,key,status:state.availability[key]??'livre',done,target:0};
+ });
+ const done=days.reduce((total,day)=>total+day.done,0);
+ const remaining=Math.max(0,state.questionTarget-done);
+ const eligible=days.filter(day=>day.key>=today&&day.status==='livre');
+ eligible.forEach((day,index)=>{day.target=Math.floor(remaining/eligible.length)+Number(index<remaining%eligible.length);});
+ return {days,done,remaining,available:eligible.length,monday,today};
+}
+function renderAgenda(){
+ const {days,done,remaining,available,monday,today}=agendaFor(Date.now(),planOffset);
+ const summary='Semana de '+weekFormat.format(monday)+' · '+state.focus+' · '+done+' de '+state.questionTarget+' questões realizadas.';
+ const detail=planOffset<0?' Semana encerrada.':!state.questionTarget?' Defina a meta de questões abaixo.':
+  remaining&&!available?' Sem dias livres restantes para distribuir as '+remaining+' questões.':' '+available+' dia(s) livre(s) para distribuir as '+remaining+' restantes.';
+ by('planSummary').textContent=summary+detail;
+ by('planDays').replaceChildren(...days.map(day=>{
+  const card=element('div','','plan-day'+(day.status!=='livre'?' blocked':'')+(day.key===today?' today':''));
+  const label=element('label','');
+  label.append(element('h4',weekdayFormat.format(day.timestamp)));
+  const select=element('select','');
+  select.setAttribute('aria-label','Disponibilidade de '+weekFormat.format(day.timestamp));
+  for(const [value,title] of Object.entries(availability)){
+   const option=element('option',title);
+   option.value=value;
+   select.append(option);
+  }
+  select.value=day.status;
+  select.onchange=()=>{
+   if(select.value==='livre')delete state.availability[day.key];
+   else state.availability[day.key]=select.value;
+   save('Disponibilidade salva.');
+   renderAgenda();
+   by('planDays').querySelectorAll('select')[days.indexOf(day)]?.focus();
+  };
+  label.append(select);
+  const plan=day.status!=='livre'?'Sem exercícios previstos':day.key<today?'Dia encerrado':day.target+' questões previstas';
+  card.append(label,element('p',plan),element('p',day.done+' realizadas'));
+  return card;
+ }));
+}
+by('prevPlanWeek').onclick=()=>{planOffset--;renderAgenda();};
+by('currentPlanWeek').onclick=()=>{planOffset=0;renderAgenda();};
+by('nextPlanWeek').onclick=()=>{planOffset++;renderAgenda();};
+
+function renderMilestones(){
+ const today=dayKey(Date.now());
+ const complete=state.milestones.filter(item=>item.done).length;
+ by('milestoneSummary').textContent=complete+' de '+state.milestones.length+' marcos concluídos.';
+ const list=by('milestoneList');
+ const items=state.milestones.slice().sort((a,b)=>Number(a.done)-Number(b.done)||(a.date||'9999').localeCompare(b.date||'9999'));
+ list.replaceChildren(...items.map(item=>{
+  const row=element('li','','row milestone-row');
+  const checkLabel=element('label','');
+  const check=element('input','');
+  check.type='checkbox';
+  check.checked=item.done;
+  check.onchange=()=>{
+   item.done=check.checked;
+   save('Marco atualizado.');
+   renderMilestones();
+   by('milestone-'+item.id)?.focus();
+  };
+  check.id='milestone-'+item.id;
+  checkLabel.append(check,element('span',item.title));
+  if(!item.done&&item.date&&item.date<today)checkLabel.append(element('small','Atrasado'));
+  const dateLabel=element('label','Data-alvo','field');
+  const date=element('input','');
+  date.type='date';
+  date.value=item.date;
+  date.setAttribute('aria-label','Data-alvo de '+item.title);
+  date.onchange=()=>{
+   item.date=date.value;
+   save('Data-alvo salva.');
+   renderMilestones();
+   by('date-'+item.id)?.focus();
+  };
+  date.id='date-'+item.id;
+  dateLabel.append(date);
+  row.append(checkLabel,dateLabel);
+  return row;
+ }));
+}
+by('milestoneAdd').onsubmit=event=>{
+ event.preventDefault();
+ const name=by('milestoneName').value.trim();
+ if(!name)return;
+ state.milestones.push({id:crypto.randomUUID(),title:name,date:by('milestoneDate').value,done:false});
+ event.target.reset();
+ save('Marco adicionado.');
+ renderMilestones();
+};
+
 const dateFormat=new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit'});
 function update(){
  const monday=weekStart(Date.now());
@@ -100,19 +234,44 @@ function update(){
  'Step 2 CK':'Prioridade sugerida: raciocínio clínico, prevenção e leitura crítica.',
  'OET Medicine':'Prioridade sugerida: prática de escrita e comunicação clínica em inglês.'
  }[state.focus];
- by('sessions').replaceChildren(...state.sessions.slice(-5).reverse().map(s=>element('li',dateFormat.format(s.date)+' · '+s.track+' · '+s.duration+' min')));
+ by('sessions').replaceChildren(...state.sessions.slice().sort((a,b)=>b.date-a.date).slice(0,5).map(session=>{
+  const questions=questionCount(session)?' · '+questionCount(session)+' questões externas':'';
+  const score=Number.isInteger(session.correct)?' · '+session.correct+' acertos':'';
+  return element('li',dateFormat.format(session.date)+' · '+session.track+' · '+session.duration+' min'+questions+score);
+ }));
+ renderAgenda();
 }
 function element(tag,label,cls){
  const el=document.createElement(tag);el.textContent=label;if(cls)el.className=cls;return el;
 }
 by('hours').value=state.hours;by('focus').value=state.focus;by('sessionTrack').value=state.focus;
 by('settings').onsubmit=e=>{
- e.preventDefault();state.hours=Number(by('hours').value);state.focus=by('focus').value;by('sessionTrack').value=state.focus;
+ e.preventDefault();state.questionTarget=Number(by('questionTarget').value);state.hours=Number(by('hours').value);state.focus=by('focus').value;by('sessionTrack').value=state.focus;
  save('Meta de '+state.hours+' horas por semana salva.');update();
 };
-by('session').onsubmit=e=>{
- e.preventDefault();state.sessions.push({duration:Number(by('duration').value),track:by('sessionTrack').value,date:Date.now()});
- by('duration').value='';save('Sessão registrada.');update();
+function refreshSessionDate(){
+ const today=dayKey(Date.now());
+ by('sessionDate').max=today;
+ by('sessionDate').value=today;
+}
+refreshSessionDate();
+by('session').onsubmit=event=>{
+ event.preventDefault();
+ const date=by('sessionDate').value;
+ const duration=Number(by('duration').value);
+ const questions=Number(by('sessionQuestions').value);
+ const input=by('sessionCorrect').value;
+ const correct=input===''?null:Number(input);
+ const status=by('sessionStatus');
+ if(!date||date>dayKey(Date.now())||(!duration&&!questions)|| (correct!==null&&(!questions||correct>questions))){
+  status.textContent='Informe minutos ou questões feitas em uma data válida. Os acertos devem ser menores ou iguais ao total de questões.';
+  return;
+ }
+ state.sessions.push({date:dayTimestamp(date),duration,track:by('sessionTrack').value,questions,correct});
+ for(const id of ['duration','sessionQuestions','sessionCorrect'])by(id).value='';
+ status.textContent='Sessão registrada.';
+ save('Sessão registrada.');
+ update();
 };
 let exercises=[];
 const weekFormat=new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
@@ -133,6 +292,27 @@ function weekStart(date){
 }
 function displayPercent(correct,total){
  return total?Math.round(100*correct/total)+'% ('+correct+'/'+total+')':'—';
+}
+let questionBankMessage='Carregando as questões opcionais…';
+async function loadOptionalBank(version){
+ try{
+  const rows=[];
+  for(let from=0;;from+=500){
+   const {data,error}=await api.from('study_questions').select('*').order('id').range(from,from+499);
+   if(version!==bootVersion)return;
+   if(error)throw error;
+   rows.push(...data);
+   if(data.length<500)break;
+  }
+  loadBank(rows);
+  questionBankMessage='Nenhuma questão disponível nesta trilha.';
+ }catch{
+  if(version!==bootVersion)return;
+  questionBankMessage='Não foi possível carregar as questões. Você pode continuar usando a agenda e registrar seu estudo externo.';
+ }
+ renderModules();
+ if(!by('revisao').hidden)renderErrors();
+ if(!by('semanas').hidden)renderWeeks();
 }
 function renderModules(){
  by('trackSwitch').replaceChildren(...Object.keys(tracks).map(track=>{
@@ -156,6 +336,7 @@ function renderModules(){
   if(complete<module.practice.length)card.append(element('p','Responda a todas as questões de treino para liberar o simulado.'));
   return card;
  }));
+ if(!modules.length)by('modules').append(element('p',questionBankMessage));
  const info=element('div','','card sources');
  info.append(element('h3','Materiais de referência'));
  clinicalSources.forEach(([label,url])=>{
@@ -336,18 +517,23 @@ function renderWeeks(){
  by('weeks').replaceChildren(...dates.map(date=>{
   const belongs=item=>weekStart(item.date)===date;
   const weekly=answers.filter(belongs);
+  const sessions=study.filter(belongs);
+  const external=sessions.reduce((total,item)=>total+questionCount(item),0);
+  const withScore=sessions.filter(item=>Number.isInteger(item.correct));
+  const externalPercent=displayPercent(withScore.reduce((total,item)=>total+item.correct,0),withScore.reduce((total,item)=>total+questionCount(item),0));
   const mocksThisWeek=mocks.filter(belongs);
   const row=element('tr','');
   const label=element('th',weekFormat.format(date));label.scope='row';
-  row.append(label,element('td',study.filter(belongs).reduce((sum,item)=>sum+item.duration,0)),element('td',weekly.length),
+  row.append(label,element('td',sessions.reduce((sum,item)=>sum+item.duration,0)),element('td',weekly.length),
    element('td',displayPercent(weekly.filter(item=>item.correct).length,weekly.length)),
-   element('td',mocksThisWeek.map(item=>exercises.find(module=>module.id===item.module).title+': '+displayPercent(item.correct,item.total)).join(' · ')||'—'));
+   element('td',external),element('td',externalPercent),
+   element('td',mocksThisWeek.map(item=>(exercises.find(module=>module.id===item.module)?.title??titles[item.module]??item.module)+': '+displayPercent(item.correct,item.total)).join(' · ')||'—'));
   return row;
  }));
- const next=tracks[track].find(module=>!mocks.some(mock=>mock.module===module.id));
- const pending=state.errors.filter(id=>tracks[track].some(module=>module.practice.includes(id)||module.mock.includes(id))).length;
- by('weeklyPriority').textContent=pending?'Prioridade sugerida: revisar '+pending+' questão(ões) pendente(s) desta trilha.':
-  next?'Próxima etapa: '+next.title+'.':'Etapas iniciais concluídas. Consulte o material oficial e registre sua autoavaliação NBME.';
+ const results=study.filter(item=>questionCount(item)>0).sort((a,b)=>b.date-a.date);
+ const last=results[0];
+ by('weeklyPriority').textContent=last?'Último registro externo: '+weekFormat.format(last.date)+' · '+last.questions+' questões.':
+  'Registre as sessões do seu caderno externo no Plano de estudos para acompanhar a evolução.';
  const step1=track==='Step 1';
  by('nbmeType').textContent=step1?'CBSSA · probabilidade estimada no relatório':'CCSSA · pontuação estimada no relatório';
  by('nbmeLabel').textContent=step1?'Probabilidade (%)':'Pontuação';
@@ -373,8 +559,9 @@ by('nbmeForm').onsubmit=event=>{
 };
 function renderErrors(){
  const area=by('errors');area.replaceChildren();
- if(!state.errors.length){area.append(element('p','Nenhuma questão pendente de revisão.'));return;}
- state.errors.forEach(id=>{
+ const visibleErrors=state.errors.filter(id=>bank[id]);
+ if(!visibleErrors.length){area.append(element('p','Nenhuma questão pendente de revisão.'));return;}
+ visibleErrors.forEach(id=>{
  const [topic,stem,,,reason]=bank[id], card=element('article','','card');
  const question=element('p',stem);question.lang='en';
  const retry=element('button','Tentar novamente','primary'), done=element('button','Marcar revisada','secondary');
@@ -418,26 +605,18 @@ async function enter(session){
  authMessage('Carregando sua conta…');
  activeUser=null;
  try {
-  const results=await Promise.all([
-   (async()=>{
-    const rows=[];
-    for(let from=0;;from+=500){
-     const {data,error}=await api.from('study_questions').select('*').order('id').range(from,from+499);
-     if(error)throw error;
-     rows.push(...data);
-     if(data.length<500)return rows;
-    }
-   })(),
-   api.from('study_progress').select('state,revision').eq('user_id',session.user.id).maybeSingle()
-  ]);
+  const progress=await api.from('study_progress').select('state,revision').eq('user_id',session.user.id).maybeSingle();
   if(version!==bootVersion)return;
-  if(!results[0].length||results[1].error)throw Error('Banco indisponível');
-  loadBank(results[0]);
+  if(progress.error)throw progress.error;
+  loadBank([]);
+  questionBankMessage='Carregando as questões opcionais…';
   activeUser=session.user;
-  revision=results[1].data?.revision??0;
-  state={...structuredClone(empty),...results[1].data?.state};
-  state.errors=state.errors.filter(id=>bank[id]);
-  if(state.activeMock&&!exercises.some(module=>module.id===state.activeMock.module))state.activeMock=null;
+  revision=progress.data?.revision??0;
+  state={...structuredClone(empty),...progress.data?.state};
+  planOffset=0;
+  refreshSessionDate();
+  by('sessionStatus').textContent='';
+  by('questionTarget').value=state.questionTarget;
   pendingSave=null;
   saveConflict=false;
   by('logout').disabled=false;
@@ -452,16 +631,17 @@ async function enter(session){
   selectedTrack=Object.hasOwn(tracks,state.focus)?state.focus:'Step 1';
   by('weeklyTrack').value=selectedTrack;
   renderChecklist();
+  renderMilestones();
   update();
   renderModules();
   by('study').hidden=false;
   by('loginPage').hidden=true;
   authMessage('');
   show('painel',false);
-  if(state.activeMock)resumeMock();
+  void loadOptionalBank(version);
  }catch{
   if(version!==bootVersion)return;
-  authMessage('Não foi possível carregar as questões ou o progresso. Tente novamente.');
+  authMessage('Não foi possível carregar seu progresso. Tente novamente.');
   by('retryBoot').hidden=false;
   by('retryBoot').onclick=()=>void enter(session);
  }

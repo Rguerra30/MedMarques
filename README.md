@@ -2,6 +2,10 @@
 
 Plataforma de estudo para Step 1 e Step 2 CK com trilhas, simulados cronometrados, evolução semanal e explicações por alternativa. O código público contém as 32 questões autorais iniciais. O progresso dos alunos é armazenado no Supabase, isolado por conta.
 
+## Planejar a semana
+
+No Plano de estudos, defina uma meta de questões, registre os plantões, pós-plantões e outros dias indisponíveis e ajuste os marcos da preparação. A agenda distribui o saldo da meta pelos dias disponíveis que ainda não passaram. Registre as sessões externas por data e trilha, incluindo questões feitas e acertos quando disponíveis. O banco interno é opcional para usar o planejamento.
+
 ## Executar e configurar
 
 1. Use a migração em `supabase/migrations/` em um novo projeto Supabase. Ela cria o banco e carrega as questões iniciais.
