@@ -42,7 +42,7 @@ const initialMilestones=[
  ['step2-prova','Realizar a prova do Step 2 CK'],
  ['ecfmg','Organizar os documentos e requisitos da ECFMG']
 ].map(([id,title])=>({id,title,date:'',done:false}));
-const empty={expenses:[],checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
+const empty={whatsappNumber:'',expenses:[],checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
 let state=structuredClone(empty);
 const by=id=>document.getElementById(id);
 let api,activeUser,revision,saving=false,saveConflict=false,pendingSave=null,bootVersion=0;
@@ -374,6 +374,28 @@ by('todayRegister').onclick=()=>{
  refreshSessionDate();
  by('sessionTrack').value=state.focus;
  by('duration').focus();
+};
+
+function normalizeWhatsapp(value){
+ const trimmed=value.trim();
+ if(!trimmed)return '';
+ const normalized=trimmed.replace(/[\s()-]/g,'');
+ return /^\+[1-9]\d{7,14}$/.test(normalized)?normalized:null;
+}
+
+by('whatsappForm').onsubmit=event=>{
+ event.preventDefault();
+ const field=by('whatsappNumber');
+ const number=normalizeWhatsapp(field.value);
+ if(number===null){
+  by('whatsappStatus').textContent='Informe o número com +, código do país e DDD.';
+  field.focus();
+  return;
+ }
+ state.whatsappNumber=number;
+ field.value=number;
+ by('whatsappStatus').textContent=number?'Número atualizado no painel.':'Número removido do painel.';
+ save(number?'Número do WhatsApp salvo.':'Número do WhatsApp removido.');
 };
 
 function renderCheckin(){
@@ -857,6 +879,8 @@ async function enter(session){
   activeUser=session.user;
   revision=progress.data?.revision??0;
   state={...structuredClone(empty),...progress.data?.state};
+  by('whatsappNumber').value=state.whatsappNumber;
+  by('whatsappStatus').textContent='';
   resetExpenseForm();
   by('expenseStatus').textContent='';
   planOffset=0;

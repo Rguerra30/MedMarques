@@ -105,6 +105,16 @@
 <label class="field">Qual é sua prioridade para a próxima semana?<input id="checkinPriority" maxlength="300" required></label>
 <div class="row q"><button class="primary">Salvar check-in</button><button type="button" class="secondary" id="checkinPlan">Planejar próximos plantões</button></div>
 </form><p id="checkinStatus" role="status"></p></div>
+<article class="card q" aria-labelledby="reminderTitle">
+<h3 id="reminderTitle">Lembretes do check-in</h3>
+<p>Faça o check-in pelo app quando for mais conveniente.</p>
+<form id="whatsappForm" class="row" aria-describedby="whatsappHelp">
+ <label class="field">Número do WhatsApp<input id="whatsappNumber" type="tel" inputmode="tel" autocomplete="tel" maxlength="30" placeholder="+55 21 99999-9999"></label>
+ <button class="primary">Salvar número</button>
+</form>
+<p id="whatsappHelp">Informe o código do país e o DDD. Para remover o número, apague o campo e salve. O envio automático depende da conexão com o WhatsApp Business.</p>
+<p id="whatsappStatus" role="status"></p>
+</article>
 <div class="card q"><h3>Check-ins anteriores</h3><ul id="checkinHistory" class="list"></ul></div>
 </section>
 <section id="glossario" class="panel" hidden>
