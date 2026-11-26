@@ -98,6 +98,23 @@
 </section>
 <section id="checkin" class="panel" hidden>
 <h2 tabindex="-1">Check-in semanal</h2>
+<article class="card" aria-labelledby="checkinScheduleTitle">
+ <h3 id="checkinScheduleTitle">Planejar o check-in</h3>
+ <p id="checkinScheduleSummary" aria-live="polite"></p>
+ <p>Se o dia preferido estiver ocupado, o app sugere o dia livre mais próximo da mesma semana. O horário segue Brasília.</p>
+ <form id="checkinWeeklySchedule" class="row">
+  <label class="field">Dia preferido<select id="checkinWeekday"><option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option><option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option><option value="6">Domingo</option></select></label>
+  <label class="field">Horário preferido<input id="checkinTime" type="time" required></label>
+  <button class="primary">Salvar preferência</button>
+ </form>
+ <form id="checkinExceptionSchedule" class="row q">
+  <label class="field">Semana<select id="checkinScheduleWeek"><option value="0">Esta semana</option><option value="1">Próxima semana</option></select></label>
+  <label class="field">Dia nessa semana<select id="checkinScheduleDate"></select></label>
+  <label class="field">Horário nessa semana<input id="checkinExceptionTime" type="time" required></label>
+  <button class="secondary">Salvar ajuste da semana</button>
+ </form>
+ <p class="muted">O agendamento desta tela organiza o check-in no app. O lembrete por e-mail usa uma programação própria.</p>
+</article>
 <div class="card"><p id="checkinSummary"></p><p id="checkinAdvice"></p>
 <form id="checkinForm">
 <label class="field">O que funcionou nesta semana?<input id="checkinWins" maxlength="300"></label>

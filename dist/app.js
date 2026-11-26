@@ -42,7 +42,7 @@ const initialMilestones=[
  ['step2-prova','Realizar a prova do Step 2 CK'],
  ['ecfmg','Organizar os documentos e requisitos da ECFMG']
 ].map(([id,title])=>({id,title,date:'',done:false}));
-const empty={whatsappNumber:'',expenses:[],checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
+const empty={checkinSchedule:{weekday:6,time:"19:00",overrides:{}},whatsappNumber:'',expenses:[],checkins:{},availability:{},questionTarget:0,milestones:initialMilestones,hours:5,focus:'Step 1',sessions:[],attempts:{},errors:[],checked:[],draft:'',practiceLog:[],mockLog:[],nbme:[],activeMock:null};
 let state=structuredClone(empty);
 const by=id=>document.getElementById(id);
 let api,activeUser,revision,saving=false,saveConflict=false,pendingSave=null,bootVersion=0;
@@ -90,7 +90,10 @@ function show(id,move=true){
  if(id==='painel') renderToday(Date.now());
  if(id==='financeiro') renderExpenses();
  if(id==='revisao') renderErrors();
- if(id==='checkin') renderCheckin();
+ if(id==='checkin') {
+  renderCheckin();
+  renderCheckinSchedule();
+ }
  if(id==='roadmap') renderRoadmap();
  if(id==='semanas') renderWeeks();
  if(move){const heading=by(id).querySelector('h2');heading.focus();}
@@ -121,11 +124,11 @@ function dayTimestamp(key){
 function questionCount(session){
  return session.questions??0;
 }
-function agendaFor(now,offset){
+function agendaFor(now,offset,useRoadmap=state.focus==='Step 1'){
  const monday=moveDay(weekStart(now),offset*7);
  const weekEnd=moveDay(monday,7);
  const today=dayKey(now);
- const roadmapWeek=state.focus==='Step 1'?roadmapForDay(dayKey(monday)):null;
+ const roadmapWeek=useRoadmap?roadmapForDay(dayKey(monday)):null;
  const external=state.sessions.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
  const internal=state.practiceLog.filter(item=>item.track===state.focus&&item.date>=monday&&item.date<weekEnd);
  const days=Array.from({length:7},(_,index)=>{
@@ -263,6 +266,7 @@ async function loadRoadmap(version,userId){
   roadmapIndex=activeWeek?roadmap.indexOf(activeWeek):0;
   by('roadmapNav').hidden=false;
   renderAgenda();
+  if(!by('checkin').hidden)renderCheckinSchedule();
  }catch{
   // A failed optional planning request does not block study or saved progress.
  }
@@ -398,8 +402,83 @@ by('whatsappForm').onsubmit=event=>{
  save(number?'Número do WhatsApp salvo.':'Número do WhatsApp removido.');
 };
 
+const brasiliaDate=new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'});
+
+// Use the Brasília calendar date even when the browser is in another time zone.
+function checkinCalendarDay(){
+ return dayTimestamp(brasiliaDate.format(Date.now()));
+}
+
+function checkinSlot(agenda,settings){
+ const override=settings.overrides[agenda.days[0].key];
+ const free=agenda.days.filter(day=>day.status==='livre'&&day.key>=agenda.today);
+ const chosen=free.find(day=>day.key===override?.date);
+ if(chosen)return {day:chosen,time:override.time};
+ const preferred=agenda.days[settings.weekday];
+ const distance=day=>Math.abs(agenda.days.indexOf(day)-settings.weekday);
+ const day=free.sort((a,b)=>distance(a)-distance(b)||b.key.localeCompare(a.key))[0];
+ return day?{day,time:settings.time,moved:day!==preferred||!!override}:null;
+}
+
+function checkinAgenda(now,offset){
+ return agendaFor(now,offset,true);
+}
+
+function renderCheckinSchedule(){
+ const now=checkinCalendarDay();
+ const settings=state.checkinSchedule;
+ by('checkinWeekday').value=settings.weekday;
+ by('checkinTime').value=settings.time;
+ const agendas=[checkinAgenda(now,0),checkinAgenda(now,1)];
+ by('checkinScheduleSummary').textContent=agendas.map((agenda,index)=>{
+  const label=index?'Próxima semana':'Esta semana';
+  if(state.checkins[agenda.days[0].key])return label+' · check-in registrado.';
+  const slot=checkinSlot(agenda,settings);
+  return label+' · '+(slot?weekdayFormat.format(slot.day.timestamp)+' às '+slot.time+(slot.moved?' (ajustado à escala)':'')+'.':'sem dia livre confirmado.');
+ }).join(' ');
+ const agenda=agendas[Number(by('checkinScheduleWeek').value)];
+ const override=settings.overrides[agenda.days[0].key];
+ const options=agenda.days.filter(day=>day.status==='livre'&&day.key>=agenda.today).map(day=>{
+  const option=element('option',weekdayFormat.format(day.timestamp));
+  option.value=day.key;
+  return option;
+ });
+ const automatic=element('option','Usar preferência semanal');
+ automatic.value='';
+ const field=by('checkinScheduleDate');
+ field.replaceChildren(automatic,...options);
+ field.value=options.some(option=>option.value===override?.date)?override.date:'';
+ by('checkinExceptionTime').value=field.value?override.time:settings.time;
+ by('checkinExceptionTime').disabled=!field.value;
+}
+
+by('checkinScheduleWeek').onchange=renderCheckinSchedule;
+by('checkinScheduleDate').onchange=()=>{
+ by('checkinExceptionTime').disabled=!by('checkinScheduleDate').value;
+};
+by('checkinWeeklySchedule').onsubmit=event=>{
+ event.preventDefault();
+ state.checkinSchedule.weekday=Number(by('checkinWeekday').value);
+ state.checkinSchedule.time=by('checkinTime').value;
+ save('Preferência do check-in salva.');
+ renderCheckinSchedule();
+};
+by('checkinExceptionSchedule').onsubmit=event=>{
+ event.preventDefault();
+ const agenda=checkinAgenda(checkinCalendarDay(),Number(by('checkinScheduleWeek').value));
+ const date=by('checkinScheduleDate').value;
+ const overrides=state.checkinSchedule.overrides;
+ const monday=agenda.days[0].key;
+ if(!date)delete overrides[monday];
+ else if(agenda.days.some(day=>day.key===date&&day.status==='livre'&&day.key>=agenda.today)){
+  overrides[monday]={date,time:by('checkinExceptionTime').value};
+ }
+ save('Planejamento do check-in atualizado.');
+ renderCheckinSchedule();
+};
+
 function renderCheckin(){
- const now=Date.now();
+ const now=checkinCalendarDay();
  const week=agendaFor(now,0);
  const next=agendaFor(now,1);
  const key=dayKey(week.monday);
@@ -426,11 +505,12 @@ by('checkinForm').onsubmit=event=>{
  event.preventDefault();
  const priority=by('checkinPriority').value.trim();
  if(!priority){by('checkinPriority').focus();return;}
- state.checkins[dayKey(weekStart(Date.now()))]={
+ state.checkins[dayKey(weekStart(checkinCalendarDay()))]={
   track:state.focus,wins:by('checkinWins').value.trim(),barrier:by('checkinBarrier').value.trim(),priority
  };
  save('Check-in registrado.');
  renderCheckin();
+ renderCheckinSchedule();
 };
 by('checkinPlan').onclick=()=>{planOffset=1;renderAgenda();show('painel');};
 
@@ -879,6 +959,7 @@ async function enter(session){
   activeUser=session.user;
   revision=progress.data?.revision??0;
   state={...structuredClone(empty),...progress.data?.state};
+  by('checkinScheduleWeek').value='0';
   by('whatsappNumber').value=state.whatsappNumber;
   by('whatsappStatus').textContent='';
   resetExpenseForm();
