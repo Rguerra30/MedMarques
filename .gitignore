@@ -1,0 +1,6 @@
+.env
+.env.*
+!.env.example
+/imports/
+*.private.json
+*.private.sql

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Organize a preparação para o USMLE e a certificação ECFMG.">
+<title>Rota Médica · Preparação para o USMLE</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#172d31;background:#f6f6ee;--green:#143f3b;--muted:#4d6662;--line:#d9e2d9;--paper:#fffefa;--accent:#d9f384}*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit}button,a,input,textarea,select{outline-offset:4px}a{color:#185a52}button{cursor:pointer}button:disabled{cursor:default;opacity:.55}p{line-height:1.55}header{background:var(--green);color:white;padding:20px max(5vw,20px);display:flex;justify-content:space-between;gap:16px;align-items:center}.brand{font-size:1.28rem;font-weight:750}.brand span{color:var(--accent);margin-right:8px}header small{color:#d9e5d8}main{max-width:1130px;margin:auto;padding:32px 24px 50px}.hero{background:var(--green);color:white;padding:clamp(24px,5vw,54px);border-radius:25px;display:grid;grid-template-columns:1.8fr 1fr;gap:24px;align-items:center}.hero p{color:#e0eee5;margin:12px 0 24px}.kicker{color:var(--accent);font-size:.78rem;letter-spacing:.13em;text-transform:uppercase;font-weight:750}h1,h2{font-family:Georgia,serif;font-weight:500}h1{font-size:clamp(2.6rem,6vw,4.8rem);line-height:1.02;margin:10px 0}h2{font-size:2rem;margin:0 0 12px}h3{margin:0 0 8px}.hero-meter{border:1px solid #ffffff4a;border-radius:16px;padding:20px}.hero-meter strong{display:block;font-size:2.2rem;color:var(--accent)}progress{width:100%;height:12px;accent-color:#83a827}nav{display:flex;gap:8px;flex-wrap:wrap;margin:25px 0}.pill,.primary,.secondary{border:1px solid var(--line);border-radius:10px;background:var(--paper);color:#163b35;padding:10px 15px;font-weight:650}.pill[aria-pressed=true],.primary{background:var(--green);color:white;border-color:var(--green)}.hero .primary{background:var(--accent);color:#172d31;border:0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px}.card p{color:var(--muted);margin:8px 0 14px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.stat{padding:16px;border-radius:12px;background:#eaf0e5;color:var(--green)}.stat strong{display:block;font-size:1.6rem}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}.field{display:grid;gap:5px}.field input,.field select,textarea{border:1px solid #a6b9ab;background:white;color:#172d31;border-radius:8px;padding:9px 10px}.field input[type=number]{max-width:120px}.muted,footer{color:var(--muted)}footer{margin-top:30px;font-size:.85rem}.list{list-style:none;margin:12px 0;padding:0}.list li{padding:12px 0;border-bottom:1px solid var(--line)}.next{margin-top:14px}.q{margin-top:16px}.option{display:block;border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0}.option input{margin-right:8px;accent-color:var(--green)}.feedback{background:#edf3e6;border-radius:10px;padding:14px;margin-top:12px}.feedback.wrong{background:#fbefe2}.flag{color:#395753;font-size:.86rem;font-weight:700}.stage label{display:flex;align-items:baseline;gap:10px}.stage input{accent-color:var(--green)}textarea{display:block;width:100%;min-height:140px;margin:12px 0}.sources a{margin-right:12px;display:inline-block;margin-bottom:8px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:.86rem}td{min-width:100px}#modules .row{gap:8px}.login{max-width:500px;margin:clamp(20px,7vw,85px) auto}.login .kicker{color:var(--green)}.login form>.field{margin:16px 0}.account{justify-content:end;margin-bottom:14px}.tutor ul{padding-left:21px}.tutor li{margin:8px 0;line-height:1.5}[hidden]{display:none!important}@media(max-width:650px){main{padding:18px 14px 32px}.hero,.cards{grid-template-columns:1fr}.hero-meter{padding:14px}.stats{gap:6px}.stat{padding:9px;font-size:.78rem}.stat strong{font-size:1.12rem}.card{padding:16px}header small{display:none}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span aria-hidden="true">✳</span> Rota Médica</div><small>USMLE e certificação ECFMG</small></header>
+<main id="loginPage">
+<section class="card login">
+<div class="kicker">USMLE e certificação ECFMG</div>
+<h2>Sua conta na Rota Médica</h2>
+<p>Entre para acessar seu plano de estudos, as questões e os simulados.</p>
+<button type="button" class="secondary" id="google">Continuar com Google</button>
+<form id="loginForm">
+<label class="field">E-mail<input id="email" type="email" autocomplete="email" required></label>
+<label class="field">Senha<input id="password" type="password" autocomplete="current-password" required></label>
+<div class="row"><button class="primary" id="emailAction">Entrar</button><button type="button" class="secondary" id="switchMode">Criar conta</button></div>
+</form>
+<p id="authStatus" role="status" aria-live="polite"></p>
+<button type="button" class="secondary" id="retryBoot" hidden>Tentar novamente</button>
+</section>
+</main>
+<main id="study" hidden>
+<div class="row account"><span id="accountEmail"></span><button type="button" class="secondary" id="logout">Sair</button></div>
+<section class="hero" aria-labelledby="title">
+  <div><div class="kicker">Espaço de estudo</div><h1 id="title">Sua preparação<br>para o USMLE</h1><p>Planeje a semana, pratique em inglês e acompanhe as etapas da certificação.</p><button class="primary" data-go="treino">Escolher uma trilha →</button></div>
+  <div class="hero-meter"><span>Meta desta semana</span><strong id="heroCount"></strong><progress id="meter" value="0" max="1" aria-label="Progresso semanal"></progress></div>
+</section>
+<nav aria-label="Áreas da plataforma">
+<button class="pill" data-go="painel" aria-controls="painel">Painel</button><button class="pill" data-go="treino" aria-controls="treino">Trilhas e simulados</button><button class="pill" data-go="semanas" aria-controls="semanas">Evolução semanal</button><button class="pill" data-go="revisao" aria-controls="revisao">Caderno de erros</button><button class="pill" data-go="ingles" aria-controls="ingles">Inglês médico</button><button class="pill" data-go="roteiro" aria-controls="roteiro">Roteiro ECFMG</button>
+</nav>
+<section id="painel" class="panel">
+<h2 tabindex="-1">Plano de estudos</h2>
+<div class="stats"><div class="stat"><strong id="minutes"></strong>Minutos na semana</div><div class="stat"><strong id="accuracy"></strong>Acertos na primeira tentativa</div><div class="stat"><strong id="pending"></strong>Questões para revisar</div></div>
+<div class="cards">
+<article class="card"><h3>Meta e foco</h3><p>Ajuste a carga de estudo à sua rotina.</p><form id="settings" class="row"><label class="field">Horas por semana<input id="hours" type="number" min="1" max="100" required></label><label class="field">Trilha em foco<select id="focus"><option>Step 1</option><option>Step 2 CK</option><option>OET Medicine</option></select></label><button class="primary">Salvar meta</button></form><p id="focusHint"></p></article>
+<article class="card"><h3>Registrar sessão</h3><p>Inclua também o tempo de estudo feito fora da plataforma.</p><form id="session" class="row"><label class="field">Minutos<input id="duration" type="number" min="1" max="720" required placeholder="30"></label><label class="field">Trilha<select id="sessionTrack"><option>Step 1</option><option>Step 2 CK</option><option>OET Medicine</option></select></label><button class="primary">Registrar</button></form><ul id="sessions" class="list"></ul></article>
+</div>
+</section>
+<section id="treino" class="panel" hidden>
+<h2 tabindex="-1">Trilhas e simulados</h2>
+<p class="muted">Pratique com correção imediata. Feche cada etapa com questões diferentes, tempo contado e correção ao final.</p>
+<div id="trackSwitch" class="row" aria-label="Exame"></div><div id="modules" class="cards q"></div>
+<div class="card q" id="question" hidden></div>
+</section>
+<section id="semanas" class="panel" hidden>
+<h2 tabindex="-1">Evolução semanal</h2>
+<p class="muted">Acompanhe os minutos, as primeiras respostas no treino e o resultado de cada simulado, por semana e por trilha.</p>
+<label class="field">Filtrar por trilha<select id="weeklyTrack"><option>Step 1</option><option>Step 2 CK</option></select></label>
+<p id="weeklyPriority" class="muted"></p>
+<div class="card q table-wrap"><table><thead><tr><th scope="col">Semana</th><th scope="col">Minutos registrados</th><th scope="col">Questões de treino</th><th scope="col">Acertos no treino</th><th scope="col">Simulados</th></tr></thead><tbody id="weeks"></tbody></table></div>
+<div class="cards q">
+<article class="card"><h3>Prontidão para a prova</h3><p>Compare a evolução nos simulados curtos e consulte o resultado oficial da autoavaliação NBME. Use CBSSA para Step 1 e CCSSA para Step 2 CK.</p><a href="https://www.nbme.org/examinees/self-assessments/" target="_blank" rel="noopener noreferrer">Autoavaliações NBME ↗</a><p>Os resultados internos medem o desempenho nas questões da plataforma. A avaliação de prontidão deve considerar também o relatório NBME e a data planejada da prova.</p></article>
+<article class="card"><h3>Registrar resultado NBME</h3><p id="nbmeType"></p><form id="nbmeForm" class="row"><label class="field">Data<input id="nbmeDate" type="date" min="2000-01-01" required></label><label class="field"><span id="nbmeLabel"></span><input id="nbmeScore" type="number" min="0" required></label><button class="primary">Registrar</button></form><ul id="nbmeList" class="list"></ul></article>
+</div>
+</section>
+<section id="revisao" class="panel" hidden><h2 tabindex="-1">Caderno de erros</h2><p class="muted">Reveja a explicação, tente de novo ou marque a questão como revisada.</p><div class="cards" id="errors"></div></section>
+<section id="ingles" class="panel" hidden>
+<h2 tabindex="-1">Inglês médico</h2><div class="cards">
+<article class="card"><h3>Writing · Carta de encaminhamento</h3><p lang="en">You are referring a 9-year-old to a pediatric allergy clinic. The referral was requested after two episodes of itchy eyes and sneezing during outdoor school activities. The parent reports that the child was well between episodes. Ask the clinic to assess possible triggers. Use only the information provided.</p><form id="writing"><label for="draft">Seu rascunho em inglês</label><textarea id="draft" lang="en" placeholder="Dear…"></textarea><button class="primary">Salvar rascunho</button></form><p>Revise o propósito da carta, a seleção das informações e a clareza do pedido final.</p></article>
+<article class="card"><h3>Speaking · Conversa com a família</h3><p lang="en">A parent is worried about a clinic appointment for their child and asks what to expect. Find out what they are most concerned about, explain how the visit will begin, and check their understanding.</p><p>Pratique em voz alta. Observe se você acolheu a preocupação, usou linguagem simples e confirmou o entendimento.</p></article>
+</div></section>
+<section id="roteiro" class="panel" hidden>
+<h2 tabindex="-1">Roteiro ECFMG</h2><p class="muted">Consulte as regras do ciclo em que pretende se candidatar. A certificação é uma etapa do percurso para a residência. A licença médica segue as regras do estado.</p>
+<div id="stages" class="cards"></div>
+</section>
+<footer><p id="status" role="status"></p><p>O progresso é sincronizado com sua conta. Aguarde a confirmação de salvamento antes de trocar de dispositivo.</p></footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.89.0/dist/umd/supabase.js" defer></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>
